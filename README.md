@@ -128,26 +128,43 @@ The goal is to create an extensible open-source assistant that feels natural to 
 
 ---
 
-## 🛣️ Roadmap
+## 🚀Saturn-AI Progress
 
-## ✅ Current Capabilities
+Current Version: v0.1
 
-- [x] 3D Orb
-- [x] Hand Tracking
-- [x] Voice Recognition
-- [x] Speech Synthesis
-- [x] Gemini Integration
-- [x] Custom AI Personality
-- [x] Brain State System
+## ✅Completed
+- Gemini integration
+- Modular AI provider
+- Browser TTS provider
+- Voice recognition
+- Client-side brain state
+- Conversation pipeline
+- Error handling
+- GitHub repository
 
-## 🚀 Planned Features
+## 🏢Current Architecture
+- AI Provider
+- TTS Provider
+- useVoice
+- useSpeech
+- useBrain
 
-- [ ] Long-Term Memory
-- [ ] Android Device Control
-- [ ] Tool Calling
-- [ ] Vision Support
-- [ ] Wake Word Detection
-- [ ] Autonomous Planning
+## 📌Next Tasks
+- Orb breathing animation
+- Listening pulse
+- Thinking animation
+- Speaking animation
+- Saturn ring
+- Kokoro TTS
+- Vision
+- Android Control
+- Memory
+
+## 📝Notes
+- Brain state is client-side.
+- Server handles AI only.
+- TTS uses provider pattern.
+- Keep provider architecture.
 
 ---
 
