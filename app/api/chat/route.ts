@@ -12,15 +12,27 @@ export async function POST(req: NextRequest) {
       success: true,
       reply,
     });
-  } catch (error) {
-    console.error("Saturn API Error:", error);
+  } catch (error: any) {
+  console.error("Saturn API Error:", error);
 
+  if (error?.status === 429) {
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to generate response.",
+        error:
+          "Saturn has reached its current Gemini free-tier quota. Please wait before trying again.",
       },
-      { status: 500 }
+      { status: 429 }
     );
   }
+
+  return NextResponse.json(
+    {
+      success: false,
+      error:
+        error?.message ?? "An unexpected error occurred.",
+    },
+    { status: 500 }
+  );
+ }
 }

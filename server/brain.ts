@@ -15,8 +15,12 @@ export function getBrainState(): BrainState {
 }
 
 export function setBrainState(state: BrainState) {
+  console.log("🧠 setBrainState:", state);
+
   if (state === currentState) return;
+
   currentState = state;
+
   listeners.forEach((listener) => listener(state));
 }
 
@@ -25,5 +29,11 @@ export function subscribeBrain(
 ) {
   listeners.add(listener);
 
-  return () => listeners.delete(listener);
+  return () => {
+  listeners.delete(listener);
+};
+}
+
+export function isBrainState(state: BrainState) {
+  return currentState === state;
 }

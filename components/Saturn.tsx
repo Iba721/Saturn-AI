@@ -6,6 +6,7 @@ import { HandTracker, type TrackerStatus } from "@/lib/handTracker";
 import { useVoice } from "@/hooks/useVoice";
 import { useSpeech } from "@/hooks/useSpeech";
 import { chat } from "@/lib/api";
+import { useBrain } from "@/hooks/useBrain";
 
 type CameraState = "off" | "starting" | "on" | "error";
 
@@ -29,10 +30,12 @@ export default function Saturn() {
 } = useVoice();
   const { speak } = useSpeech();
   const prevListening = useRef(false);
+  const { brainState, setBrainState } = useBrain();
 
   const [camera, setCamera] = useState<CameraState>("off");
   const [status, setStatus] = useState<TrackerStatus>({ hands: 0, mode: "idle" });
   const [error, setError] = useState<string | null>(null);
+  const lastTranscriptRef = useRef("");
 
   useEffect(() => {
     const container = containerRef.current;
@@ -110,6 +113,7 @@ export default function Saturn() {
           break;
         case "v":
         case "V":
+          setBrainState("listening");
           startListening();
           break;
       }
@@ -121,17 +125,40 @@ export default function Saturn() {
 
 useEffect(() => {
   async function handleConversation() {
-    if (prevListening.current && !listening && transcript) {
+    if (
+  prevListening.current &&
+  !listening &&
+  transcript &&
+  transcript !== lastTranscriptRef.current
+) { 
+    lastTranscriptRef.current = transcript;
       try {
         console.log("You:", transcript);
+
+        setBrainState("thinking");
 
         const reply = await chat(transcript);
 
         console.log("Saturn:", reply);
 
-        speak(reply);
+        setBrainState("speaking");
+
+        await speak(reply);
+
+        setBrainState("idle");
       } catch (error) {
         console.error(error);
+
+        setBrainState("error");
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred.";
+
+        await speak(message);
+
+        setBrainState("idle");
       }
     }
 
@@ -139,7 +166,7 @@ useEffect(() => {
   }
 
   void handleConversation();
-}, [listening, transcript, speak]);
+}, [listening, transcript, speak, setBrainState]);
 
 
   const cameraOn = camera === "on";

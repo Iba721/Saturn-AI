@@ -1,42 +1,31 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { tts } from "@/server/speech";
 
 export function useSpeech() {
   const [speaking, setSpeaking] = useState(false);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     return () => {
-      window.speechSynthesis.cancel();
+      tts.stop();
     };
   }, []);
 
-  const speak = (text: string) => {
+  const speak = async (text: string) => {
     if (!text.trim()) return;
 
-    window.speechSynthesis.cancel();
+    setSpeaking(true);
 
-    const utterance = new SpeechSynthesisUtterance(text);
-
-    utterance.lang = "en-US";
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-
-    utterance.onstart = () => setSpeaking(true);
-
-    utterance.onend = () => setSpeaking(false);
-
-    utterance.onerror = () => setSpeaking(false);
-
-    utteranceRef.current = utterance;
-
-    window.speechSynthesis.speak(utterance);
+    try {
+      await tts.speak(text);
+    } finally {
+      setSpeaking(false);
+    }
   };
 
   const stop = () => {
-    window.speechSynthesis.cancel();
+    tts.stop();
     setSpeaking(false);
   };
 
