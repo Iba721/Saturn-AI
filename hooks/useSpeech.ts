@@ -1,16 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { tts } from "@/server/speech";
+import { useRef, useState } from "react";
 
 export function useSpeech() {
   const [speaking, setSpeaking] = useState(false);
-
-  useEffect(() => {
-    return () => {
-      tts.stop();
-    };
-  }, []);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const speak = async (text: string) => {
     if (!text.trim()) return;
@@ -18,14 +12,47 @@ export function useSpeech() {
     setSpeaking(true);
 
     try {
-      await tts.speak(text);
-    } finally {
+      const response = await fetch("/api/speech", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate speech.");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      const audio = new Audio(url);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        setSpeaking(false);
+      };
+
+      await audio.play();
+
+    } catch (err) {
+      console.error(err);
       setSpeaking(false);
     }
   };
 
   const stop = () => {
-    tts.stop();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
     setSpeaking(false);
   };
 

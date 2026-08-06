@@ -1,4 +1,3 @@
 export interface TTSProvider {
-  speak(text: string): Promise<void>;
-  stop(): void;
+  speak(text: string): Promise<Response>;
 }

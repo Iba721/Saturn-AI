@@ -1,3 +1,3 @@
-import { BrowserTTS } from "./browser";
+import { ElevenLabsTTS } from "./elevenlabs";
 
-export const tts = new BrowserTTS();
+export const tts = new ElevenLabsTTS();
