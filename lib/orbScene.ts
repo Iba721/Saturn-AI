@@ -12,7 +12,8 @@ import {
   createSpherePanel,
 } from "./geometry";
 import { SATURN } from "./saturnConfig";
-import { getBreathingState, getIdleState } from "./animations";
+import {  getAnimationState, getBreathingState,  getIdleState,} from "./animations";
+import { brainState } from "./brainState";
 
 export interface OrbSceneApi {
   /** Rotate the camera around the orb by the given angles (radians). */
@@ -117,14 +118,30 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
   // LAYER 1: OUTER SHELL — dense wireframe grid
   // ═══════════════════════════════════════════════
   const outerShell = new THREE.Group();
+  const shellMaterials: THREE.LineBasicMaterial[] = [];
   const R1 = 2.0;
+
+  // Every outer-shell line/segment goes through this helper so its
+  // material is tracked in shellMaterials — otherwise the state-driven
+  // color update in the animate loop has nothing to actually update.
+  function shellLine(geometry: THREE.BufferGeometry, color: number, opacity: number) {
+    const mat = lineMat(color, opacity);
+    shellMaterials.push(mat);
+    return new THREE.Line(geometry, mat);
+  }
+
+  function shellLineSegments(geometry: THREE.BufferGeometry, color: number, opacity: number) {
+    const mat = lineMat(color, opacity);
+    shellMaterials.push(mat);
+    return new THREE.LineSegments(geometry, mat);
+  }
 
   // Dense latitude rings (30+)
   for (let i = -15; i <= 15; i++) {
     const lat = (i / 15) * (Math.PI / 2) * 0.95;
     const opacity = i % 3 === 0 ? 0.5 : 0.12;
     const color = i % 3 === 0 ? COLORS.MID : COLORS.FAINT;
-    outerShell.add(new THREE.Line(latRing(R1, lat), lineMat(color, opacity)));
+    outerShell.add(shellLine(latRing(R1, lat), color, opacity));
   }
 
   // Dense meridians (24)
@@ -132,10 +149,7 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
     const lon = (i / 24) * Math.PI * 2;
     const isMajor = i % 6 === 0;
     outerShell.add(
-      new THREE.Line(
-        meridian(R1, lon),
-        lineMat(isMajor ? COLORS.MID : COLORS.FAINT, isMajor ? 0.6 : 0.1),
-      ),
+      shellLine(meridian(R1, lon), isMajor ? COLORS.MID : COLORS.FAINT, isMajor ? 0.6 : 0.1),
     );
   }
 
@@ -150,9 +164,7 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
       const falloff = 1 - Math.abs(t) * 0.7; // brighter at center, dimmer at edges
       const opacity = 0.85 * falloff;
       const color = Math.abs(t) < 0.3 ? COLORS.BRIGHT : COLORS.MID;
-      outerShell.add(
-        new THREE.Line(meridian(R1, lon + offset, 200), lineMat(color, opacity)),
-      );
+      outerShell.add(shellLine(meridian(R1, lon + offset, 200), color, opacity));
     }
   }
 
@@ -165,9 +177,7 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
     const falloff = 1 - Math.abs(t) * 0.65;
     const opacity = 0.35 * falloff;
     const color = Math.abs(t) < 0.3 ? COLORS.BRIGHT : COLORS.MID;
-    outerShell.add(
-      new THREE.Line(latRing(R1, offset, 200), lineMat(color, opacity)),
-    );
+    outerShell.add(shellLine(latRing(R1, offset, 200), color, opacity));
   }
 
   orbGroup.add(outerShell);
@@ -562,7 +572,7 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
     const r = R1 + 0.02;
     const hexGeo = new THREE.CircleGeometry(0.03 + Math.random() * 0.02, 6);
     const hexEdges = new THREE.EdgesGeometry(hexGeo);
-    const hex = new THREE.LineSegments(hexEdges, lineMat(COLORS.MID, 0.5));
+    const hex = shellLineSegments(hexEdges, COLORS.MID, 0.5);
     hex.position.set(
       r * Math.sin(phi) * Math.cos(theta),
       r * Math.cos(phi),
@@ -623,9 +633,21 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
     if (disposed) return;
     rafId = requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
-    const breathing = getBreathingState(t);
+    const animation = getAnimationState( brainState.current);
+  saturnRing.setColor(animation.visual.ringColor);
+  coreSphereMat.color.set(animation.visual.coreColor);
+  glowSphereMat.color.set(animation.visual.coreColor);
+  dustMat.color.set(animation.visual.dustColor);
+  shellMaterials.forEach((m) => {
+    m.color.set(animation.visual.shellColor);
+});
+  
+    const breathing = getBreathingState(
+    t,
+    animation.breathing
+   );
     const idle = getIdleState(t);
-    saturnRing.group.rotation.y += 0.002;
+    saturnRing.group.rotation.y += 0.002 * animation.ring.rotationSpeed;
     saturnRing.group.rotation.z = idle.ringTilt;
 
     // Entire orb slowly drifts
@@ -760,8 +782,9 @@ innerCore.scale.setScalar(
       });
     }
 
-    // Bloom pulse
-    bloom.strength = 1.6 + Math.sin(t * 0.8) * 0.3;
+    bloom.strength =
+    animation.bloom.strength +
+    Math.sin(t * animation.glow.pulse) * 0.15;
 
     // Update chromatic aberration time
     chromaticPass.uniforms.uTime.value = t;

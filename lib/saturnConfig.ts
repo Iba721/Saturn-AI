@@ -4,7 +4,7 @@ export const SATURN = {
 
     RING: {
 
-        INNER_OFFSET: 1.40,
+        INNER_OFFSET: 0.75,
 
         OUTER_OFFSET: 2.20,
 
