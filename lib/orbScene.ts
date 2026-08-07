@@ -12,6 +12,7 @@ import {
   createSpherePanel,
 } from "./geometry";
 import { SATURN } from "./saturnConfig";
+import { getBreathingState, getIdleState } from "./animations";
 
 export interface OrbSceneApi {
   /** Rotate the camera around the orb by the given angles (radians). */
@@ -622,24 +623,46 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
     if (disposed) return;
     rafId = requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
+    const breathing = getBreathingState(t);
+    const idle = getIdleState(t);
     saturnRing.group.rotation.y += 0.002;
+    saturnRing.group.rotation.z = idle.ringTilt;
+
+    // Entire orb slowly drifts
+    orbGroup.rotation.x = idle.orbTiltX;
+    orbGroup.rotation.z = idle.orbTiltZ;
 
     // Outer shell rotation
     outerShell.rotation.y += 0.0015;
-    outerShell.rotation.x = Math.sin(t * 0.08) * 0.05;
+    outerShell.rotation.x = idle.shellTilt;
+
+   // Breathing
+    outerShell.scale.setScalar(
+    1 + breathing.outer
+  );
 
     // Panel group follows shell but with slight offset
     panelGroup.rotation.y += 0.0018;
     panelGroup.rotation.x = Math.sin(t * 0.08 + 0.5) * 0.04;
 
     // Secondary shell counter-rotates slowly
-    shell2.rotation.y -= 0.001;
-    shell2.rotation.z = Math.sin(t * 0.12) * 0.03;
+shell2.rotation.y -= 0.001;
+shell2.rotation.z = Math.sin(t * 0.12) * 0.03;
+
+// Breathing
+shell2.scale.setScalar(
+    1 + breathing.middle
+);
 
     // Inner core — opposite, faster
-    innerCore.rotation.y -= 0.005;
-    innerCore.rotation.z += 0.002;
-    innerCore.rotation.x = Math.cos(t * 0.1) * 0.08;
+innerCore.rotation.y -= 0.005;
+innerCore.rotation.z += 0.002;
+innerCore.rotation.x = Math.cos(t * 0.1) * 0.08;
+
+// Breathing
+innerCore.scale.setScalar(
+    1 + breathing.inner
+);
 
     // Innermost wireframe
     icoWire.rotation.x += 0.008;
@@ -651,7 +674,11 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
     const wave4 = Math.pow(Math.max(0, Math.sin(t * 0.7 + 2)), 8); // mega surge
     const fadeOut = Math.pow(Math.max(0, Math.sin(t * 0.25)), 3); // periodic full transparency
     const surge = wave3 * 1.5 + wave4 * 2.0;
-    const coreScale = 1 + surge + Math.sin(t * 5) * 0.05;
+    const coreScale =
+    1 +
+    surge +
+    breathing.inner +
+    Math.sin(t * 5) * 0.02;
     coreSphere.scale.setScalar(coreScale);
     // Opacity: mostly very low (0-0.15), sometimes fully transparent, brief bright on surge
     const coreOpacity = Math.max(
@@ -660,7 +687,12 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
     );
     coreSphereMat.opacity = Math.min(0.6, coreOpacity);
     glowSphere.scale.setScalar(1 + surge * 0.8);
-    glowSphereMat.opacity = Math.max(0, (0.03 + surge * 0.08) * (1 - fadeOut * 0.9));
+    glowSphereMat.opacity = Math.max(
+    0,
+    (0.03 + surge * 0.08) *
+    (1 - fadeOut * 0.9) *
+    breathing.glow
+);
     // Icosahedron wireframe stays visible even when glow fades
     icoWire.scale.setScalar(1 + surge * 0.6);
     icoWireMat.opacity = Math.min(1, 0.5 + surge * 0.4);
@@ -709,8 +741,13 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
     scanRing2.scale.set(scanS2, scanS2, 1);
     (scanRing2.material as THREE.MeshBasicMaterial).opacity = 0.15 * scanS2;
 
-    // Dust rotation
+    // Dust
     dustPoints.rotation.y += 0.0002;
+    dustPoints.rotation.x = idle.dustTilt;
+
+      dustPoints.scale.setScalar(
+       1 + breathing.outer * 0.6
+    );
 
     // Random flicker on some panels
     flickerTimer += 0.016;
