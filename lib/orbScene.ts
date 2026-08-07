@@ -11,6 +11,7 @@ import {
   meridian,
   createSpherePanel,
 } from "./geometry";
+import { SATURN } from "./saturnConfig";
 
 export interface OrbSceneApi {
   /** Rotate the camera around the orb by the given angles (radians). */
@@ -49,10 +50,11 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
 
   const bloom = new UnrealBloomPass(
     new THREE.Vector2(width, height),
-    1.8, // strength
-    0.4, // radius
-    0.2, // threshold
-  );
+    SATURN.BLOOM.STRENGTH,
+    SATURN.BLOOM.RADIUS,
+    SATURN.BLOOM.THRESHOLD,
+);
+
   composer.addPass(bloom);
 
   // Chromatic aberration + color grade shader
@@ -154,13 +156,13 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
   }
 
   // Bright equator band — wide
-  const EQ_LINES = 20;
+  const EQ_LINES = 8;
   const EQ_SPREAD = 0.35;
   for (let j = 0; j < EQ_LINES; j++) {
     const t = (j / (EQ_LINES - 1)) * 2 - 1;
     const offset = (t * EQ_SPREAD) / 2;
     const falloff = 1 - Math.abs(t) * 0.65;
-    const opacity = 0.8 * falloff;
+    const opacity = 0.35 * falloff;
     const color = Math.abs(t) < 0.3 ? COLORS.BRIGHT : COLORS.MID;
     outerShell.add(
       new THREE.Line(latRing(R1, offset, 200), lineMat(color, opacity)),

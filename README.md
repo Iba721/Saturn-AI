@@ -4,8 +4,9 @@
 
 > A modular voice-first AI assistant featuring a real-time holographic orb inspired by the elegance and symbolism of Saturn.
 
-![Saturn Orb](docs/screenshot.png)
-
+![Saturn Orb]
+(docs/screenshot/top_screenshot.png) 
+(docs/screenshot/side_screenshot.png)
 ---
 
 ## ✨ Features
@@ -13,6 +14,7 @@
 ### Interface
 
 - 🌌 Interactive 3D holographic orb
+- 🪐 Saturn ring system
 - 🖐️ Hand gesture controls
 
 ### AI
@@ -25,12 +27,14 @@
 ### Voice
 
 - 🎤 Speech recognition
-- 🗣️ Speech synthesis
+- 🗣️ Permanent Saturn voice via ElevenLabs
+- 🔤 Speech formatting for natural pronunciation
 
 ### Architecture
 
 - ⚡ Modular AI provider
 - 🏗️ Next.js + TypeScript
+- 🔌 Provider-based speech architecture
 
 ---
 
@@ -52,8 +56,10 @@ npm install
 Create a `.env.local` file
 
 ```env
-SATURN_GEMINI_API_KEY=YOUR_API_KEY
+SATURN_GEMINI_API_KEY=YOUR_GEMINI_API_KEY
 SATURN_MODEL=gemini-3.6-flash
+ELEVENLABS_API_KEY=YOUR_ELEVENLABS_API_KEY
+SATURN_VOICE_ID=brtgSJjjOqKrg09MZrB8
 ```
 
 Run the development server
@@ -125,46 +131,6 @@ Saturn-AI is being developed as a modular assistant capable of naturally:
 - 📋 Planning complex tasks
 
 The goal is to create an extensible open-source assistant that feels natural to interact with while remaining easy for developers to expand.
-
----
-
-## 🚀Saturn-AI Progress
-
-Current Version: v0.1
-
-## ✅Completed
-- Gemini integration
-- Modular AI provider
-- Browser TTS provider
-- Voice recognition
-- Client-side brain state
-- Conversation pipeline
-- Error handling
-- GitHub repository
-
-## 🏢Current Architecture
-- AI Provider
-- TTS Provider
-- useVoice
-- useSpeech
-- useBrain
-
-## 📌Next Tasks
-- Orb breathing animation
-- Listening pulse
-- Thinking animation
-- Speaking animation
-- Saturn ring
-- Kokoro TTS
-- Vision
-- Android Control
-- Memory
-
-## 📝Notes
-- Brain state is client-side.
-- Server handles AI only.
-- TTS uses provider pattern.
-- Keep provider architecture.
 
 ---
 

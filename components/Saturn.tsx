@@ -7,6 +7,7 @@ import { useVoice } from "@/hooks/useVoice";
 import { useSpeech } from "@/hooks/useSpeech";
 import { chat } from "@/lib/api";
 import { useBrain } from "@/hooks/useBrain";
+import Image from "next/image";
 
 type CameraState = "off" | "starting" | "on" | "error";
 
@@ -180,10 +181,23 @@ useEffect(() => {
       <div className="overlay-scanlines" />
 
       <div className="hud hud-title">
-        S.A.T.U.R.N
-        {listening && (
-          <div style={{ fontSize: "0.8rem", color: "#00d4ff" }}>
-            🎤 LISTENING...
+  <Image
+    src="/branding/logo.svg"
+    alt="Saturn"
+    width={190}
+    height={110}
+    priority
+  />
+
+  {listening && (
+    <div
+      style={{
+        fontSize: "0.8rem",
+        color: "#00d4ff",
+        marginTop: "6px",
+      }}
+    >
+      🎤 LISTENING...
     </div>
   )}
 </div>

@@ -159,7 +159,6 @@ body {
   font-size: 13px;
   letter-spacing: 0.35em;
   opacity: 0.7;
-  text-shadow: 0 0 10px rgba(255, 170, 48, 0.8);
   pointer-events: none;
 }
 
@@ -169,7 +168,6 @@ body {
   margin-top: 6px;
   width: 120px;
   height: 1px;
-  background: linear-gradient(to right, rgba(255, 170, 48, 0.8), transparent);
 }
 
 .hud-error {
