@@ -4,9 +4,8 @@
 
 > A modular voice-first AI assistant featuring a real-time holographic orb inspired by the elegance and symbolism of Saturn.
 
-![Saturn Orb]
-(docs/screenshot/top_screenshot.png) 
-(docs/screenshot/side_screenshot.png)
+![Saturn Orb] (docs/screenshot/top_screenshot.png) 
+![Saturn Orb] (docs/screenshot/side_screenshot.png)
 ---
 
 ## ✨ Features
