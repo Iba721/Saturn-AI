@@ -8,8 +8,7 @@ const client = new ElevenLabsClient({
 
 export class ElevenLabsTTS implements TTSProvider {
   async speak(text: string): Promise<Response> {
-
-  const formattedText = formatForSpeech(text);
+    const formattedText = formatForSpeech(text);
 
     try {
       const audioStream = await client.textToSpeech.convert(
@@ -19,7 +18,6 @@ export class ElevenLabsTTS implements TTSProvider {
           model_id: "eleven_multilingual_v2",
           output_format: "mp3_44100_128",
 
-          // Leave your voice_settings here for now
           voice_settings: {
             stability: 0.75,
             similarity_boost: 0.9,
@@ -30,11 +28,19 @@ export class ElevenLabsTTS implements TTSProvider {
         }
       );
 
-      return new Response(audioStream, {
-        headers: {
-          "Content-Type": "audio/mpeg",
-        },
-      });
+      const chunks: Buffer[] = [];
+
+for await (const chunk of audioStream) {
+  chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+}
+
+const audioBuffer = Buffer.concat(chunks);
+
+return new Response(audioBuffer, {
+  headers: {
+    "Content-Type": "audio/mpeg",
+  },
+});
     } catch (err: any) {
       console.error("🔥 ElevenLabs Error:", err);
 

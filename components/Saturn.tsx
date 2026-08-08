@@ -26,17 +26,26 @@ export default function Saturn() {
   const {
   transcript,
   listening,
-  startListening,
-  stopListening,//disabled
+  startWakeListening,
+  startCommandListening,
+  stopListening,
+  resetTranscript,
+  containsWakeWord,
+  extractCommand,
 } = useVoice();
   const { speak } = useSpeech();
-  const prevListening = useRef(false);
   const { brainState, setBrainState } = useBrain();
 
   const [camera, setCamera] = useState<CameraState>("off");
   const [status, setStatus] = useState<TrackerStatus>({ hands: 0, mode: "idle" });
   const [error, setError] = useState<string | null>(null);
   const lastTranscriptRef = useRef("");
+  const wakeListeningRef = useRef(false);
+  const wakeDetectedRef = useRef(false);
+  const commandListeningRef = useRef(false);
+  const commandStartTranscriptRef = useRef("");
+  const conversationActiveRef = useRef(false);
+  const conversationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -50,6 +59,16 @@ export default function Saturn() {
       sceneRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+  console.log("🪐 Starting Saturn wake listener...");
+
+  startWakeListening();
+
+  return () => {
+    stopListening();
+  };
+}, [startWakeListening, stopListening]);
 
   const stopGestures = useCallback(() => {
     trackerRef.current?.stop();
@@ -112,62 +131,202 @@ export default function Saturn() {
         case "G":
           toggleGestures();
           break;
-        case "v":
-        case "V":
-          setBrainState("listening");
-          startListening();
-          break;
       }
     };
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggleGestures, startListening]);
+  }, [toggleGestures, startCommandListening]);
 
-useEffect(() => {
-  async function handleConversation() {
-    if (
-  prevListening.current &&
-  !listening &&
-  transcript &&
-  transcript !== lastTranscriptRef.current
-) { 
-    lastTranscriptRef.current = transcript;
-      try {
-        console.log("You:", transcript);
+const endConversation = useCallback(() => {
+  console.log("🪐 Conversation ended.");
 
-        setBrainState("thinking");
-
-        const reply = await chat(transcript);
-
-        console.log("Saturn:", reply);
-
-        setBrainState("speaking");
-
-        await speak(reply);
-
-        setBrainState("idle");
-      } catch (error) {
-        console.error(error);
-
-        setBrainState("error");
-
-        const message =
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred.";
-
-        await speak(message);
-
-        setBrainState("idle");
-      }
-    }
-
-    prevListening.current = listening;
+  if (conversationTimeoutRef.current) {
+    clearTimeout(conversationTimeoutRef.current);
+    conversationTimeoutRef.current = null;
   }
 
-  void handleConversation();
-}, [listening, transcript, speak, setBrainState]);
+  conversationActiveRef.current = false;
+  commandListeningRef.current = false;
+  wakeDetectedRef.current = false;
+  lastTranscriptRef.current = "";
+
+  resetTranscript();
+  stopListening();
+
+  setBrainState("idle");
+
+  startWakeListening();
+}, [
+  resetTranscript,
+  stopListening,
+  startWakeListening,
+  setBrainState,
+]);
+
+const resetConversationTimeout = useCallback(() => {
+  if (conversationTimeoutRef.current) {
+    clearTimeout(conversationTimeoutRef.current);
+  }
+
+  conversationTimeoutRef.current = setTimeout(() => {
+    console.log("🪐 20 seconds passed. Conversation ended.");
+    endConversation();
+  }, 20_000);
+}, [endConversation]);
+
+useEffect(() => {
+  async function handleVoice() {
+    if (!transcript.trim()) return;
+
+    const text = transcript.trim();
+
+    console.log("🎤 Voice:", text);
+
+    // ================================
+    // WAITING FOR "HEY SATURN"
+    // ================================
+
+    if (!wakeDetectedRef.current) {
+      if (!containsWakeWord(text)) {
+        return;
+      }
+
+      console.log("🪐 WAKE WORD DETECTED!");
+
+      wakeDetectedRef.current = true;
+
+      const command = extractCommand(text);
+
+      console.log("🪐 Extracted command:", command);
+
+      stopListening();
+
+      // "Hey Saturn" with no command
+      if (!command) {
+  setBrainState("speaking");
+
+  try {
+    await speak("Yes?");
+  } catch (error) {
+    console.error("Saturn wake response failed:", error);
+    setBrainState("error");
+    return;
+  }
+
+  setBrainState("idle");
+
+  resetTranscript();
+
+  conversationActiveRef.current = true;
+  commandListeningRef.current = true;
+  commandStartTranscriptRef.current = text;
+
+  startCommandListening();
+  resetConversationTimeout();
+
+  return;
+}
+
+      // "Hey Saturn, hello"
+      conversationActiveRef.current = true;
+      commandStartTranscriptRef.current = text;
+
+      await processCommand(command);
+
+      return;
+    }
+
+    // ================================
+    // WAITING FOR COMMAND
+    // ================================
+
+        if (commandListeningRef.current) {
+  if (text === commandStartTranscriptRef.current) {
+    return;
+  }
+
+  console.log("🗣️ COMMAND RECEIVED:", text);
+  console.log("🛑 END COMMAND CHECK:", JSON.stringify(text));
+
+  if (text.toLowerCase().trim() === "nothing") {
+    endConversation();
+    return;
+  }
+
+  await processCommand(text);
+
+  return;
+}
+  }
+
+  async function processCommand(command: string) {
+    try {
+      console.log("You:", command);
+
+      commandListeningRef.current = false;
+
+      stopListening();
+
+      setBrainState("thinking");
+
+      const reply = await chat(command);
+
+      console.log("Saturn:", reply);
+
+      setBrainState("speaking");
+
+      await speak(reply);
+
+      setBrainState("idle");
+
+    } catch (error) {
+      console.error(error);
+
+      setBrainState("error");
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred.";
+
+      try {
+  await speak(message);
+} catch (speakError) {
+  console.error(
+    "Saturn failed to speak the error too:",
+    speakError,
+  );
+} finally {
+  setBrainState("idle");
+}
+    } finally {
+  wakeDetectedRef.current = true;
+  commandListeningRef.current = true;
+  lastTranscriptRef.current = "";
+
+  resetTranscript();
+
+  if (conversationActiveRef.current) {
+    resetConversationTimeout();
+    startCommandListening();
+  }
+}
+  }
+  void handleVoice();
+}, [
+  transcript,
+  listening,
+  containsWakeWord,
+  extractCommand,
+  stopListening,
+  startCommandListening,
+  resetTranscript,
+  speak,
+  setBrainState,
+  resetConversationTimeout,
+  endConversation,
+]);
 
 
   const cameraOn = camera === "on";
