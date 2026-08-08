@@ -122,18 +122,27 @@ ringGroup.add(fadeRing2);
   { y:  0.035, opacity: 0.16 },
 ];
 
-for (const layer of layers) {
+const layerMaterials: THREE.MeshBasicMaterial[] = [];
 
-    const mesh = new THREE.Mesh(
-        geometry,
-        material.clone()
-    );
-    mesh.material.opacity = layer.opacity;
-    mesh.position.y = layer.y;
-    mesh.rotation.x = THREE.MathUtils.degToRad(
+for (const layer of layers) {
+  const layerMaterial = material.clone();
+
+  layerMaterial.opacity = layer.opacity;
+
+  layerMaterials.push(layerMaterial);
+
+  const mesh = new THREE.Mesh(
+    geometry,
+    layerMaterial
+  );
+
+  mesh.position.y = layer.y;
+
+  mesh.rotation.x = THREE.MathUtils.degToRad(
     SATURN.RING.TILT
-)
-    ringGroup.add(mesh);
+  );
+
+  ringGroup.add(mesh);
 }
 
   const brightRing = new THREE.Mesh(
@@ -156,7 +165,16 @@ ringGroup.add(shadowRing);
 
   return {
     group: ringGroup,
-    setColor: (color) => material.color.set(color),
+    setColor: (color) => {
+  material.color.set(color);
+  brightMaterial.color.set(color);
+  shadowMaterial.color.set(color);
+  fadeMaterial.color.set(color);
+
+  layerMaterials.forEach((m) => {
+    m.color.set(color);
+  });
+},
     setOpacity: (opacity) => { material.opacity = opacity; },
     dispose: () => {
 

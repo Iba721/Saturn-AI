@@ -240,10 +240,10 @@ bloom: {
     },
 
     visual: {
-    coreColor: 0xFF6B6B,
-    ringColor: 0xC2182B,
-    shellColor: 0x6E1F1F,
-    dustColor: 0xD64545,
+  coreColor: 0xFF00FF,
+  ringColor: 0xFF00FF,
+  shellColor: 0xFF00FF,
+  dustColor: 0xFF00FF
 },
 
 bloom: {

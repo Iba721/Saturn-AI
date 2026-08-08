@@ -3,7 +3,7 @@ import type { BrainState } from "./animations/types/brain";
 type Listener = (state: BrainState) => void;
 
 class BrainStateManager {
-  private state: BrainState = "idle";
+  private state: BrainState = "error";
   private listeners = new Set<Listener>();
 
   get current() {

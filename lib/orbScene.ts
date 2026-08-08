@@ -263,6 +263,7 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
   // LAYER 4: INNER CORE — spiral geodesic
   // ═══════════════════════════════════════════════
   const innerCore = new THREE.Group();
+  const innerCoreMaterials: THREE.LineBasicMaterial[] = [];
   const R3 = 0.9;
 
   // Dense spirals
@@ -283,24 +284,49 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
         ),
       );
     }
-    innerCore.add(
-      new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(pts),
-        lineMat(COLORS.BRIGHT, 0.3 + Math.random() * 0.2),
-      ),
-    );
+    const mat = lineMat(
+  COLORS.BRIGHT,
+  0.3 + Math.random() * 0.2
+);
+
+innerCoreMaterials.push(mat);
+
+innerCore.add(
+  new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    mat,
+  ),
+);
   }
 
   // Inner latitude rings
   for (let i = -6; i <= 6; i++) {
     const lat = (i / 6) * (Math.PI / 2) * 0.9;
-    innerCore.add(new THREE.Line(latRing(R3, lat, 80), lineMat(COLORS.DIM, 0.2)));
+    const mat = lineMat(COLORS.DIM, 0.2);
+
+innerCoreMaterials.push(mat);
+
+innerCore.add(
+  new THREE.Line(
+    latRing(R3, lat, 80),
+    mat
+  )
+);
   }
 
   // Inner meridians
   for (let i = 0; i < 12; i++) {
     const lon = (i / 12) * Math.PI * 2;
-    innerCore.add(new THREE.Line(meridian(R3, lon, 80), lineMat(COLORS.DIM, 0.15)));
+    const mat = lineMat(COLORS.DIM, 0.15);
+
+innerCoreMaterials.push(mat);
+
+innerCore.add(
+  new THREE.Line(
+    meridian(R3, lon, 80),
+    mat
+  )
+);
   }
 
   orbGroup.add(innerCore);
@@ -338,107 +364,6 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
   orbGroup.add(glowSphere);
 
   // ═══════════════════════════════════════════════
-  // CODE TEXT — tiny, dense, scattered
-  // ═══════════════════════════════════════════════
-  const codeSnippets = [
-    "sys.init()", "0xFF3A", "malloc()", ">> SCAN", "void*", "ACK",
-    "SYNC OK", "ptr_ref", "exec()", "hash256", "::bind", "core.0",
-    "01101001", "10110100", ">>> RDY", "HEAP 4K", "TCP/SYN",
-    "mutex.lk", "IRQ 0x7", "DMA xfer", "REG EAX", "FAULT 0",
-    "kernel.d", "pipe |>", "chmod +x", "fork()", "SIGTERM",
-    "eth0: UP", "AES-256", "RSA 4096", "TLS 1.3", "HTTP/2",
-    "latency", "200 OK", "PATCH /", "fn main", "use std",
-    "impl Orb", "async {}", "spawn()", "arc::new", ".unwrap",
-  ];
-
-  interface SpriteDrift {
-    phi: number;
-    theta: number;
-    r: number;
-    speed: number;
-  }
-
-  function makeTextSprite(text: string, size = 0.08) {
-    const c = document.createElement("canvas");
-    c.width = 256;
-    c.height = 32;
-    const ctx = c.getContext("2d")!;
-    ctx.font = "bold 14px Courier New";
-    const alpha = 0.35 + Math.random() * 0.55;
-    ctx.fillStyle = `rgba(255, ${(130 + Math.random() * 80) | 0}, ${(20 + Math.random() * 30) | 0}, ${alpha})`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, 128, 16);
-    const tex = new THREE.CanvasTexture(c);
-    tex.minFilter = THREE.LinearFilter;
-    const s = new THREE.Sprite(
-      new THREE.SpriteMaterial({
-        map: tex,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      }),
-    );
-    s.scale.set(size * 5, size * 0.7, 1);
-    return s;
-  }
-
-  function scatterText(count: number, sizeFn: () => number, rFn: () => number, speedScale: [number, number]) {
-    const group = new THREE.Group();
-    for (let i = 0; i < count; i++) {
-      const sp = makeTextSprite(
-        codeSnippets[Math.floor(Math.random() * codeSnippets.length)],
-        sizeFn(),
-      );
-      const phi = Math.acos(2 * Math.random() - 1);
-      const theta = Math.random() * Math.PI * 2;
-      const r = rFn();
-      sp.position.set(
-        r * Math.sin(phi) * Math.cos(theta),
-        r * Math.cos(phi),
-        r * Math.sin(phi) * Math.sin(theta),
-      );
-      sp.userData = {
-        phi,
-        theta,
-        r,
-        speed:
-          (speedScale[0] + Math.random() * speedScale[1]) *
-          (Math.random() > 0.5 ? 1 : -1),
-      } satisfies SpriteDrift;
-      group.add(sp);
-    }
-    return group;
-  }
-
-  // On outer sphere — dense text coverage
-  const textOuter = scatterText(
-    1200,
-    () => 0.04 + Math.random() * 0.04,
-    () => R1 + 0.03 + Math.random() * 0.08,
-    [0.0002, 0.0008],
-  );
-  orbGroup.add(textOuter);
-
-  // On inner core — more text
-  const textInner = scatterText(
-    100,
-    () => 0.03 + Math.random() * 0.03,
-    () => R3 + 0.02,
-    [0.0005, 0.001],
-  );
-  orbGroup.add(textInner);
-
-  // Floating ambient text between shells
-  const textAmbient = scatterText(
-    400,
-    () => 0.03,
-    () => R3 + 0.2 + Math.random() * (R1 - R3 - 0.3),
-    [0.0003, 0.0006],
-  );
-  orbGroup.add(textAmbient);
-
-  // ═══════════════════════════════════════════════
   // ORBITING DEBRIS / ROCKS
   // ═══════════════════════════════════════════════
   // Shared geometries for performance — reuse across 250 satellites
@@ -458,6 +383,7 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
     phase: number;
   }
   const debris: THREE.Mesh[] = [];
+  const debrisMaterials: THREE.MeshBasicMaterial[] = [];
   for (let i = 0; i < 250; i++) {
     const geo = debrisGeos[Math.floor(Math.random() * debrisGeos.length)];
     const mat = new THREE.MeshBasicMaterial({
@@ -466,6 +392,9 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
       opacity: 0.3 + Math.random() * 0.6,
       blending: THREE.AdditiveBlending,
     });
+
+    debrisMaterials.push(mat);
+
     const mesh = new THREE.Mesh(geo, mat);
     const orbitR = 1.2 + Math.random() * 4.0;
     const speed = (0.08 + Math.random() * 0.6) * (Math.random() > 0.5 ? 1 : -1);
@@ -521,10 +450,10 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
   dotC.width = dotC.height = 64;
   const dCtx = dotC.getContext("2d")!;
   const g = dCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  g.addColorStop(0, "rgba(255,170,48,1)");
-  g.addColorStop(0.2, "rgba(255,120,20,0.6)");
-  g.addColorStop(0.5, "rgba(200,80,0,0.15)");
-  g.addColorStop(1, "rgba(100,40,0,0)");
+g.addColorStop(0, "rgba(255,255,255,1)");
+g.addColorStop(0.2, "rgba(255,255,255,0.6)");
+g.addColorStop(0.5, "rgba(255,255,255,0.15)");
+g.addColorStop(1, "rgba(255,255,255,0)");
   dCtx.fillStyle = g;
   dCtx.fillRect(0, 0, 64, 64);
 
@@ -635,8 +564,19 @@ export function createOrbScene(container: HTMLElement): OrbSceneApi {
     const t = clock.getElapsedTime();
     const animation = getAnimationState( brainState.current);
   saturnRing.setColor(animation.visual.ringColor);
+
   coreSphereMat.color.set(animation.visual.coreColor);
   glowSphereMat.color.set(animation.visual.coreColor);
+  icoWireMat.color.set(animation.visual.coreColor);
+
+  innerCoreMaterials.forEach((m) => {
+    m.color.set(animation.visual.coreColor);
+  });
+
+  debrisMaterials.forEach((mat) => {
+  mat.color.set(animation.visual.dustColor);
+});
+
   dustMat.color.set(animation.visual.dustColor);
   shellMaterials.forEach((m) => {
     m.color.set(animation.visual.shellColor);
@@ -731,24 +671,6 @@ innerCore.scale.setScalar(
       d.rotation.x += 0.015;
       d.rotation.z += 0.01;
     });
-
-    // Text drift
-    const driftGroups: [THREE.Group, number][] = [
-      [textOuter, 1],
-      [textInner, 2],
-      [textAmbient, 1.2],
-    ];
-    for (const [group, mult] of driftGroups) {
-      group.children.forEach((sp) => {
-        const u = sp.userData as SpriteDrift;
-        u.theta += u.speed * mult;
-        sp.position.set(
-          u.r * Math.sin(u.phi) * Math.cos(u.theta),
-          u.r * Math.cos(u.phi),
-          u.r * Math.sin(u.phi) * Math.sin(u.theta),
-        );
-      });
-    }
 
     // Scan rings sweeping
     const scanY1 = Math.sin(t * 0.4) * R1;
