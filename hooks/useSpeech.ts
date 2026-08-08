@@ -7,45 +7,60 @@ export function useSpeech() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const speak = async (text: string) => {
-    if (!text.trim()) return;
+  if (!text.trim()) return;
 
-    setSpeaking(true);
+  setSpeaking(true);
 
-    try {
-      const response = await fetch("/api/speech", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ text }),
-      });
+  try {
+    const response = await fetch("/api/speech", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    });
 
-      if (!response.ok) {
-        throw new Error("Failed to generate speech.");
-      }
+    if (!response.ok) {
+      throw new Error("Failed to generate speech.");
+    }
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
 
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
 
-      const audio = new Audio(url);
-      audioRef.current = audio;
+    const audio = new Audio(url);
+    audioRef.current = audio;
 
+    await new Promise<void>((resolve, reject) => {
       audio.onended = () => {
         URL.revokeObjectURL(url);
         setSpeaking(false);
+        resolve();
       };
 
-      await audio.play();
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        setSpeaking(false);
+        reject(new Error("Audio playback failed."));
+      };
 
-    } catch (err) {
-      console.error(err);
-      setSpeaking(false);
-    }
-  };
+      audio.play().catch((err) => {
+        URL.revokeObjectURL(url);
+        setSpeaking(false);
+        reject(err);
+      });
+    });
+
+  } catch (err) {
+    console.error(err);
+    setSpeaking(false);
+    throw err;
+  }
+};
 
   const stop = () => {
     if (audioRef.current) {

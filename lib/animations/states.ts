@@ -79,8 +79,8 @@ export const ANIMATION_STATES: Record<BrainState, AnimationStateConfig> = {
 },
 
 bloom: {
-    strength: 1.25,
-    radius: 0.35,
+    strength: 0.75,
+    radius: 0.8,
     threshold: 0.65,
 },
   },
@@ -121,8 +121,8 @@ bloom: {
 },
 
 bloom: {
-    strength: 1.55,
-    radius: 0.40,
+    strength: 1.05,
+    radius: 0.9,
     threshold: 0.60,
 },
   },
@@ -163,8 +163,8 @@ bloom: {
 },
 
 bloom: {
-    strength: 1.85,
-    radius: 0.42,
+    strength: 1.25,
+    radius: 0.95,
     threshold: 0.58,
 },
   },
@@ -205,9 +205,9 @@ bloom: {
 },
 
 bloom: {
-    strength: 2.4,
-    radius: 0.55,
-    threshold: 0.45,
+    strength: 1.45,
+    radius: 0.85,
+    threshold: 0.50,
 },
   },
 
@@ -240,16 +240,16 @@ bloom: {
     },
 
     visual: {
-  coreColor: 0xFF00FF,
-  ringColor: 0xFF00FF,
-  shellColor: 0xFF00FF,
-  dustColor: 0xFF00FF
+    coreColor: 0xFF6B6B,
+    ringColor: 0xC2182B,
+    shellColor: 0x6E1F1F,
+    dustColor: 0xD64545,
 },
 
 bloom: {
-    strength: 0.45,
-    radius: 0.18,
-    threshold: 0.90,
+    strength: 0.55,
+    radius: 1.0,
+    threshold: 0.75,
 },
   },
 
@@ -289,8 +289,8 @@ bloom: {
 },
 
 bloom: {
-    strength: 1.05,
-    radius: 0.25,
+    strength: 1.10,
+    radius: 1.0,
     threshold: 0.72,
    },
   },

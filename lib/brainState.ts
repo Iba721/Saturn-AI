@@ -1,25 +1,37 @@
 import type { BrainState } from "./animations/types/brain";
+export type BrainStateListener = (state: BrainState) => void;
 
-type Listener = (state: BrainState) => void;
+let current: BrainState = "idle";
 
-class BrainStateManager {
-  private state: BrainState = "error";
-  private listeners = new Set<Listener>();
+const listeners = new Set<BrainStateListener>();
 
-  get current() {
-    return this.state;
-  }
+export const brainState = {
+  get current(): BrainState {
+    return current;
+  },
 
-  setState(state: BrainState) {
-    if (state === this.state) return;
-    this.state = state;
-    this.listeners.forEach((fn) => fn(state));
-  }
+setState(state: BrainState) {
+  console.log(
+    "🧠 STATE CHANGE:",
+    current,
+    "→",
+    state,
+  );
 
-  subscribe(fn: Listener) {
-    this.listeners.add(fn);
-    return () => this.listeners.delete(fn);
-  }
-}
+  if (state === current) return;
 
-export const brainState = new BrainStateManager();
+  current = state;
+
+  listeners.forEach((listener) => {
+    listener(state);
+  });
+},
+
+  subscribe(listener: BrainStateListener) {
+    listeners.add(listener);
+
+    return () => {
+      listeners.delete(listener);
+    };
+  },
+};

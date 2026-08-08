@@ -6,14 +6,12 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { createRing } from "./ring";
 import { COLORS, lineMat } from "./materials";
-import {
-  latRing,
-  meridian,
-  createSpherePanel,
-} from "./geometry";
+import { latRing, meridian, createSpherePanel } from "./geometry";
 import { SATURN } from "./saturnConfig";
-import {  getAnimationState, getBreathingState,  getIdleState,} from "./animations";
+import {  getAnimationState, getBreathingState,  getIdleState } from "./animations";
 import { brainState } from "./brainState";
+import { AnimationController } from "./animations/controller";
+import type { BrainState } from "./animations/types/brain";
 
 export interface OrbSceneApi {
   /** Rotate the camera around the orb by the given angles (radians). */
@@ -554,15 +552,38 @@ g.addColorStop(1, "rgba(255,255,255,0)");
   // ANIMATION
   // ═══════════════════════════════════════════════
   const clock = new THREE.Clock();
+  const animationController = new AnimationController(
+  brainState.current,
+);
+
+(window as any).saturnState = (state: BrainState) => {
+  brainState.setState(state);
+};
+
+const unsubscribeBrainState = brainState.subscribe((state) => {
+   console.log("🪐 SATURN RECEIVED:", state);
+  animationController.setState(
+    state,
+    performance.now(),
+  );
+});
+
   let flickerTimer = 0;
   let rafId = 0;
   let disposed = false;
 
   function animate() {
     if (disposed) return;
+
     rafId = requestAnimationFrame(animate);
+
     const t = clock.getElapsedTime();
-    const animation = getAnimationState( brainState.current);
+
+    const now = performance.now();
+
+    const animation = animationController.update(
+  performance.now(),
+);
   saturnRing.setColor(animation.visual.ringColor);
 
   coreSphereMat.color.set(animation.visual.coreColor);
@@ -627,86 +648,229 @@ innerCore.scale.setScalar(
 );
 
     // Innermost wireframe
-    icoWire.rotation.x += 0.008;
-    icoWire.rotation.y += 0.012;
+icoWire.rotation.x += 0.008 * animation.ring.rotationSpeed;
+icoWire.rotation.y += 0.012 * animation.ring.rotationSpeed;
 
-    // Core pulse — dramatic surges but mostly transparent
-    const wave1 = Math.sin(t * 1.2);
-    const wave3 = Math.pow(Math.max(0, Math.sin(t * 0.4)), 5); // rare big surge
-    const wave4 = Math.pow(Math.max(0, Math.sin(t * 0.7 + 2)), 8); // mega surge
-    const fadeOut = Math.pow(Math.max(0, Math.sin(t * 0.25)), 3); // periodic full transparency
-    const surge = wave3 * 1.5 + wave4 * 2.0;
-    const coreScale =
-    1 +
-    surge +
-    breathing.inner +
-    Math.sin(t * 5) * 0.02;
-    coreSphere.scale.setScalar(coreScale);
-    // Opacity: mostly very low (0-0.15), sometimes fully transparent, brief bright on surge
-    const coreOpacity = Math.max(
-      0,
-      (0.08 + wave1 * 0.05 + surge * 0.2) * (1 - fadeOut * 0.95),
-    );
-    coreSphereMat.opacity = Math.min(0.6, coreOpacity);
-    glowSphere.scale.setScalar(1 + surge * 0.8);
-    glowSphereMat.opacity = Math.max(
-    0,
-    (0.03 + surge * 0.08) *
-    (1 - fadeOut * 0.9) *
-    breathing.glow
+// Core pulse
+const wave1 =
+  Math.sin(t * 1.2 * animation.glow.pulse);
+
+const wave3 =
+  Math.pow(
+    Math.max(0, Math.sin(t * 0.4 * animation.glow.pulse)),
+    5,
+  );
+
+const wave4 =
+  Math.pow(
+    Math.max(0, Math.sin(t * 0.7 * animation.glow.pulse + 2)),
+    8,
+  );
+
+const fadeOut =
+  Math.pow(
+    Math.max(0, Math.sin(t * 0.25)),
+    3,
+  );
+
+const surge =
+  wave3 * 1.5 +
+  wave4 * 2.0;
+
+const coreScale =
+  1 +
+  surge +
+  breathing.inner +
+  Math.sin(t * 5) * 0.02;
+
+coreSphere.scale.setScalar(coreScale);
+
+// Core glow
+const coreOpacity = Math.max(
+  0,
+  (
+    0.08 +
+    wave1 * 0.05 +
+    surge * 0.2
+  ) *
+  animation.glow.intensity *
+  (1 - fadeOut * 0.95),
 );
-    // Icosahedron wireframe stays visible even when glow fades
-    icoWire.scale.setScalar(1 + surge * 0.6);
-    icoWireMat.opacity = Math.min(1, 0.5 + surge * 0.4);
+
+coreSphereMat.opacity = Math.min(
+  0.6,
+  coreOpacity,
+);
+
+glowSphere.scale.setScalar(
+  1 +
+  surge *
+  0.8 *
+  animation.glow.radius,
+);
+
+glowSphereMat.opacity = Math.max(
+  0,
+  (
+    0.03 +
+    surge * 0.08
+  ) *
+  animation.glow.intensity *
+  (1 - fadeOut * 0.9) *
+  breathing.glow,
+);
+
+// Icosahedron wireframe
+icoWire.scale.setScalar(
+  1 +
+  surge *
+  0.6 *
+  animation.glow.radius,
+);
+
+icoWireMat.opacity = Math.min(
+  1,
+  0.5 +
+  surge *
+  0.4 *
+  animation.glow.intensity,
+);
 
     // Debris orbits
-    debris.forEach((d) => {
-      const u = d.userData as DebrisOrbit;
-      const a = t * u.speed + u.phase;
-      d.position.set(
-        u.orbitR * Math.cos(a) * Math.cos(u.tiltX),
-        u.orbitR * Math.sin(u.tiltX) * Math.sin(a * 0.8) + Math.sin(a * 0.3 + u.tiltZ) * 0.2,
-        u.orbitR * Math.sin(a) * Math.cos(u.tiltZ),
-      );
-      d.rotation.x += 0.015;
-      d.rotation.z += 0.01;
-    });
+const debrisSpeed =
+  animation.ring.rotationSpeed;
+
+debris.forEach((d) => {
+  const u = d.userData as DebrisOrbit;
+
+  const a =
+    t *
+    u.speed *
+    debrisSpeed +
+    u.phase;
+
+  d.position.set(
+    u.orbitR *
+      Math.cos(a) *
+      Math.cos(u.tiltX),
+
+    u.orbitR *
+      Math.sin(u.tiltX) *
+      Math.sin(a * 0.8) +
+      Math.sin(a * 0.3 + u.tiltZ) * 0.2,
+
+    u.orbitR *
+      Math.sin(a) *
+      Math.cos(u.tiltZ),
+  );
+
+  d.rotation.x +=
+    0.015 *
+    debrisSpeed;
+
+  d.rotation.z +=
+    0.01 *
+    debrisSpeed;
+});
 
     // Scan rings sweeping
-    const scanY1 = Math.sin(t * 0.4) * R1;
-    scanRing1.position.y = scanY1;
-    const scanS1 = Math.sqrt(Math.max(0, R1 * R1 - scanY1 * scanY1)) / R1;
-    scanRing1.scale.set(scanS1, scanS1, 1);
-    (scanRing1.material as THREE.MeshBasicMaterial).opacity = 0.2 * scanS1;
+const scanSpeed = animation.glow.pulse;
 
-    const scanY2 = Math.sin(t * 0.6 + 2) * R3;
-    scanRing2.position.y = scanY2;
-    const scanS2 = Math.sqrt(Math.max(0, R3 * R3 - scanY2 * scanY2)) / R3;
-    scanRing2.scale.set(scanS2, scanS2, 1);
-    (scanRing2.material as THREE.MeshBasicMaterial).opacity = 0.15 * scanS2;
+const scanY1 =
+  Math.sin(t * 0.4 * scanSpeed) * R1;
+
+scanRing1.position.y = scanY1;
+
+const scanS1 =
+  Math.sqrt(
+    Math.max(
+      0,
+      R1 * R1 - scanY1 * scanY1,
+    ),
+  ) / R1;
+
+scanRing1.scale.set(
+  scanS1,
+  scanS1,
+  1,
+);
+
+(
+  scanRing1.material as THREE.MeshBasicMaterial
+).opacity =
+  0.2 *
+  scanS1 *
+  animation.ring.rippleStrength;
+
+
+const scanY2 =
+  Math.sin(t * 0.6 * scanSpeed + 2) * R3;
+
+scanRing2.position.y = scanY2;
+
+const scanS2 =
+  Math.sqrt(
+    Math.max(
+      0,
+      R3 * R3 - scanY2 * scanY2,
+    ),
+  ) / R3;
+
+scanRing2.scale.set(
+  scanS2,
+  scanS2,
+  1,
+);
+
+(
+  scanRing2.material as THREE.MeshBasicMaterial
+).opacity =
+  0.15 *
+  scanS2 *
+  animation.ring.rippleStrength;
 
     // Dust
-    dustPoints.rotation.y += 0.0002;
-    dustPoints.rotation.x = idle.dustTilt;
+dustPoints.rotation.y +=
+  0.0002 *
+  animation.ring.rotationSpeed;
 
-      dustPoints.scale.setScalar(
-       1 + breathing.outer * 0.6
-    );
+dustPoints.rotation.x =
+  idle.dustTilt *
+  animation.ring.wobble;
+
+dustPoints.scale.setScalar(
+  1 +
+  breathing.outer * 0.6,
+);
 
     // Random flicker on some panels
     flickerTimer += 0.016;
     if (flickerTimer > 0.1) {
       flickerTimer = 0;
       panelGroup.children.forEach((p) => {
-        if (Math.random() > 0.95) {
-          p.visible = !p.visible;
-        }
+        const flickerStrength =
+  animation.idle.strength;
+
+if (
+  Math.random() >
+  1 - 0.05 * flickerStrength
+) {
+  p.visible = !p.visible;
+}
       });
     }
 
-    bloom.strength =
-    animation.bloom.strength +
-    Math.sin(t * animation.glow.pulse) * 0.15;
+    const bloomPulse =
+  Math.sin(t * animation.glow.pulse) * 0.05;
+
+bloom.strength =
+  Math.max(
+    0,
+    animation.bloom.strength + bloomPulse,
+  );
+
+  bloom.radius = animation.bloom.radius;
+  bloom.threshold = animation.bloom.threshold;
 
     // Update chromatic aberration time
     chromaticPass.uniforms.uTime.value = t;
@@ -749,6 +913,7 @@ innerCore.scale.setScalar(
     composer.dispose();
     renderer.dispose();
     renderer.domElement.remove();
+    unsubscribeBrainState();
   }
 
   return {

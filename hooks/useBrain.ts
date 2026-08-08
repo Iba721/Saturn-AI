@@ -1,21 +1,23 @@
 "use client";
 
-import { useState } from "react";
-
-export type BrainState =
-  | "idle"
-  | "listening"
-  | "thinking"
-  | "speaking"
-  | "executing"
-  | "error";
+import { useEffect, useState } from "react";
+import type { BrainState } from "@/lib/animations/types/brain";
+import { brainState } from "@/lib/brainState";
 
 export function useBrain() {
-  const [brainState, setBrainState] =
-    useState<BrainState>("idle");
+  const [state, setState] = useState<BrainState>(
+    brainState.current,
+  );
+
+  useEffect(() => {
+    return brainState.subscribe(setState);
+  }, []);
 
   return {
-    brainState,
-    setBrainState,
+    brainState: state,
+
+    setBrainState: (nextState: BrainState) => {
+      brainState.setState(nextState);
+    },
   };
 }
