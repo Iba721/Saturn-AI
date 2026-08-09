@@ -5,7 +5,7 @@ import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
 
-const WAKE_WORD = "hey saturn";
+const WAKE_WORD = "saturn";
 
 export function useVoice() {
   const {

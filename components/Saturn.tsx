@@ -170,9 +170,9 @@ const resetConversationTimeout = useCallback(() => {
   }
 
   conversationTimeoutRef.current = setTimeout(() => {
-    console.log("🪐 20 seconds passed. Conversation ended.");
+    console.log("🪐 40 seconds passed. Conversation ended.");
     endConversation();
-  }, 20_000);
+  }, 40_000);
 }, [endConversation]);
 
 useEffect(() => {
@@ -301,15 +301,19 @@ useEffect(() => {
   setBrainState("idle");
 }
     } finally {
-  wakeDetectedRef.current = true;
-  commandListeningRef.current = true;
   lastTranscriptRef.current = "";
 
   resetTranscript();
 
   if (conversationActiveRef.current) {
+    wakeDetectedRef.current = true;
+    commandListeningRef.current = true;
+
     resetConversationTimeout();
     startCommandListening();
+  } else {
+    wakeDetectedRef.current = false;
+    commandListeningRef.current = false;
   }
 }
   }
