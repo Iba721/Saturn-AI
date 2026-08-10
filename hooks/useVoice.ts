@@ -7,11 +7,12 @@ const WAKE_WORD = "saturn";
 
 export function useVoice() {
   const {
-    transcript,
-    listening,
-    resetTranscript,
-    browserSupportsSpeechRecognition,
-  } = useSpeechRecognition();
+  transcript,
+  finalTranscript,
+  listening,
+  resetTranscript,
+  browserSupportsSpeechRecognition,
+} = useSpeechRecognition();
 
   const startWakeListening = useCallback(() => {
     if (!browserSupportsSpeechRecognition) {
@@ -71,14 +72,15 @@ export function useVoice() {
   }, []);
 
   return {
-    transcript,
-    listening,
-    startWakeListening,
-    startCommandListening,
-    stopListening,
-    resetTranscript,
-    containsWakeWord,
-    extractCommand,
-    browserSupportsSpeechRecognition,
-  };
-}
+  transcript,
+  finalTranscript,
+  listening,
+  startWakeListening,
+  startCommandListening,
+  stopListening,
+  resetTranscript,
+  containsWakeWord,
+  extractCommand,
+  browserSupportsSpeechRecognition,
+};
+  }

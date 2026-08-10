@@ -23,16 +23,7 @@ export default function Saturn() {
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<OrbSceneApi | null>(null);
   const trackerRef = useRef<HandTracker | null>(null);
-  const {
-  transcript,
-  listening,
-  startWakeListening,
-  startCommandListening,
-  stopListening,
-  resetTranscript,
-  containsWakeWord,
-  extractCommand,
-} = useVoice();
+  const {  transcript, finalTranscript, listening, startWakeListening, startCommandListening, stopListening, resetTranscript, containsWakeWord, extractCommand,} = useVoice();
   const { speak } = useSpeech();
   const { brainState, setBrainState } = useBrain();
 
@@ -177,11 +168,14 @@ const resetConversationTimeout = useCallback(() => {
 
 useEffect(() => {
   async function handleVoice() {
-    if (!transcript.trim()) return;
+  if (!finalTranscript.trim()) {
+    return;
+  }
 
-    const text = transcript.trim();
+  const text = finalTranscript.trim();
 
-    console.log("🎤 Voice:", text);
+    console.log("🎤 Interim Voice:", transcript.trim());
+    console.log("🎤 Final Voice:", finalTranscript.trim());
 
     // ================================
     // WAITING FOR "HEY SATURN"
@@ -238,10 +232,16 @@ useEffect(() => {
     }
 
     // ================================
-    // WAITING FOR COMMAND
-    // ================================
+// WAITING FOR COMMAND
+// ================================
 
-        if (commandListeningRef.current) {
+if (commandListeningRef.current) {
+  // Do not process partial speech.
+  // Wait until browser speech recognition has actually stopped.
+  if (listening) {
+    return;
+  }
+
   if (text === commandStartTranscriptRef.current) {
     return;
   }
@@ -320,6 +320,7 @@ useEffect(() => {
   void handleVoice();
 }, [
   transcript,
+  finalTranscript,
   listening,
   containsWakeWord,
   extractCommand,
