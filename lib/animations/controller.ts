@@ -1,10 +1,7 @@
 import type { BrainState } from "./types/brain";
 import type { AnimationStateConfig } from "./states";
 import { ANIMATION_STATES } from "./states";
-import {
-  getTransitionProgress,
-  interpolateAnimationState,
-} from "./transitions";
+import { getTransitionProgress, interpolateAnimationState,} from "./transitions";
 
 export class AnimationController {
   private currentState: BrainState;

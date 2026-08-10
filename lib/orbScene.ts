@@ -382,6 +382,12 @@ innerCore.add(
   }
   const debris: THREE.Mesh[] = [];
   const debrisMaterials: THREE.MeshBasicMaterial[] = [];
+  // Trail lines get their own tracked array — they're LineBasicMaterial,
+  // not MeshBasicMaterial like the debris bodies, so they can't share
+  // debrisMaterials' array type. Previously these were created via a
+  // bare lineMat() call with no tracking at all, meaning ~15% of debris
+  // trails never responded to state color changes.
+  const debrisTrailMaterials: THREE.LineBasicMaterial[] = [];
   for (let i = 0; i < 250; i++) {
     const geo = debrisGeos[Math.floor(Math.random() * debrisGeos.length)];
     const mat = new THREE.MeshBasicMaterial({
@@ -416,9 +422,11 @@ innerCore.add(
           ),
         );
       }
+      const trailMat = lineMat(COLORS.FAINT, 0.08);
+      debrisTrailMaterials.push(trailMat);
       const trail = new THREE.Line(
         new THREE.BufferGeometry().setFromPoints(trailPts),
-        lineMat(COLORS.FAINT, 0.08),
+        trailMat,
       );
       mesh.add(trail);
     }
@@ -556,9 +564,15 @@ g.addColorStop(1, "rgba(255,255,255,0)");
   brainState.current,
 );
 
-(window as any).saturnState = (state: BrainState) => {
-  brainState.setState(state);
-};
+// Hidden dev console hook (from the original roadmap's "F12 -> type
+// command -> Saturn executes" idea) — kept out of production builds so
+// a live site doesn't ship a global that lets anyone force Saturn's
+// visible state from the browser console.
+if (process.env.NODE_ENV !== "production") {
+  (window as any).saturnState = (state: BrainState) => {
+    brainState.setState(state);
+  };
+}
 
 const unsubscribeBrainState = brainState.subscribe((state) => {
    console.log("🪐 SATURN RECEIVED:", state);
@@ -597,6 +611,13 @@ const unsubscribeBrainState = brainState.subscribe((state) => {
   debrisMaterials.forEach((mat) => {
   mat.color.set(animation.visual.dustColor);
 });
+
+  // Debris trails ride along with the debris bodies' color mapping —
+  // they're the same visual "family" (orbiting particulate), just a
+  // different material type, so no separate config field needed.
+  debrisTrailMaterials.forEach((mat) => {
+    mat.color.set(animation.visual.dustColor);
+  });
 
   dustMat.color.set(animation.visual.dustColor);
   shellMaterials.forEach((m) => {
