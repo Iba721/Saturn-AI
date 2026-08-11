@@ -5,6 +5,7 @@ import { createOrbScene, type OrbSceneApi } from "@/lib/orbScene";
 import { HandTracker, type TrackerStatus } from "@/lib/handTracker";
 import { useVoice } from "@/hooks/useVoice";
 import { useSpeech } from "@/hooks/useSpeech";
+import type { ConversationMessage } from "@/lib/conversation";
 import { chat } from "@/lib/api";
 import { useBrain } from "@/hooks/useBrain";
 import Image from "next/image";
@@ -31,6 +32,7 @@ export default function Saturn() {
   const [status, setStatus] = useState<TrackerStatus>({ hands: 0, mode: "idle" });
   const [error, setError] = useState<string | null>(null);
   const lastTranscriptRef = useRef("");
+  const conversationHistoryRef = useRef<ConversationMessage[]>([]);
   const wakeListeningRef = useRef(false);
   const wakeDetectedRef = useRef(false);
   const commandListeningRef = useRef(false);
@@ -270,7 +272,23 @@ if (commandListeningRef.current) {
 
       setBrainState("thinking");
 
-      const reply = await chat(command);
+      const history = conversationHistoryRef.current;
+
+const reply = await chat(command, history);
+
+const updatedHistory: ConversationMessage[] = [
+  ...history,
+  {
+    role: "user",
+    content: command,
+  },
+  {
+    role: "assistant",
+    content: reply,
+  },
+];
+
+conversationHistoryRef.current = updatedHistory.slice(-10); // Keep only the last 10 messages
 
       console.log("Saturn:", reply);
 
