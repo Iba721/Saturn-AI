@@ -1,6 +1,6 @@
 # 🪐 Saturn-AI
 
-> 🚧 **Status:** Active Development
+> 🚧 **Status:** Development on Pause
 
 > A modular voice-first AI assistant featuring a real-time holographic orb inspired by the elegance and symbolism of Saturn.
 
